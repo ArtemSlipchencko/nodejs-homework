@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const contactRouter = require('./routes/contact.routes');
 
 const PORT = process.env.port || 8080;
 
@@ -26,12 +27,12 @@ class Server {
   }
 
   initRoutes() {
-
+    this.server.use('/api/contacts', contactRouter);
   }
 
   listen() {
     this.server.listen(PORT, () => {
-      console.log('Server is listening')
+      console.log(`Server is listening on port: ${PORT}`)
     })
   }
 
