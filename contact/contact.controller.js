@@ -1,5 +1,6 @@
 const {Types: {ObjectId}} = require('mongoose');
 const Contact = require('./Contact');
+const Joi = require('joi');
 
 async function listContacts(req, res) {
     const contacts = await Contact.find();
@@ -62,6 +63,44 @@ function validateId(req, res, next) {
     };
 
     next();
+};
+
+function validateUpdateContact(req, res, next) {
+    const validationRules = Joi.object({
+            name: Joi.string().required(),
+            email: Joi.string().required(),
+            phone: Joi.string().required(),
+            subscription: Joi.string().required(),
+            password: Joi.string().required(),
+            token: Joi.string()
+    }).min(1);
+
+    const validationResult = validationRules.validate(req.body);
+
+    if(validationResult.error) {
+        return res.status(400).json(validationResult.error)
+    };
+
+    next();
+};
+
+function validateCreateContact(req, res, next) {
+    const validationRules = Joi.object({
+            name: Joi.string().required(),
+            email: Joi.string().required(),
+            phone: Joi.string().required(),
+            subscription: Joi.string().required(),
+            password: Joi.string().required(),
+            token: Joi.string().empty('')
+    });
+
+    const validationResult = validationRules.validate(req.body);
+
+    if(validationResult.error) {
+        return res.status(400).json(validationResult.error)
+    };
+
+    next();
 }
 
 module.exports = {
@@ -70,5 +109,7 @@ module.exports = {
     createContact,
     contactUpdate,
     contactDelete,
-    validateId
+    validateId,
+    validateCreateContact,
+    validateUpdateContact
 };
