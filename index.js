@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const contactRoutes = require('./contact/contact.routes');
+const userRoutes = require('./user/user.routes');
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
@@ -26,7 +28,8 @@ function initMiddlewares(server) {
 };
 
 function initRoutes(server) {
-  server.use('/api/contacts', contactRoutes)
+  server.use('/api/contacts', contactRoutes);
+  server.use('/auth', userRoutes);
 };
 
 async function connectToDb() {
