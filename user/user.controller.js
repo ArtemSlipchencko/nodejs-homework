@@ -11,14 +11,14 @@ async function registerValidation(req, res, next) {
 
     const user = await User.findOne({email});
 
-    if(!user) {
-        return res.status(409).send('Eail in use')
+    if(user) {
+        return res.status(409).send('Email in use')
     };
 
     const validationRules = Joi.object({
         email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }).required(),
         password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9]{3,30}$')).required(),
-        subscription: Joi.string().required(),
+        subscription: Joi.string(),
         token: Joi.string()
     });
 
@@ -90,12 +90,85 @@ async function userLogin(req, res) {
         process.env.JWT_SECRET
     );
 
-    return res.json({token});
+    user.token = token;
+
+    const userLogged = await User.findByIdAndUpdate(user._id, user, {new: true});
+
+    return res.json({
+        token,
+        user: {
+            email,
+            subscription: user.subscription
+        }
+    });
+};
+
+async function authorization(req, res, next) {
+    const authHeader = req.get('Authorization');
+    if(!authHeader) {
+        return res.status(401).send('User is unauthorized')
+    };
+    const token = authHeader.replace('Bearer ', '');
+
+    try {
+        const payload = await jwt.verify(token, process.env.JWT_SECRET);
+        const {userId} = payload;
+
+        const user = await User.findById(userId);
+
+        if(!user) {
+            return res.status(401).send('User is unauthorized')
+        }
+
+        next();
+    } catch (error) {
+        return res.status(401).send(error);
+    }
+};
+
+async function userLogout(req, res) {
+    const authHeader = req.get('Authorization');
+    const token = authHeader.replace('Bearer ', '');
+
+    const payload = await jwt.verify(token, process.env.JWT_SECRET);
+    const {userId} = payload;
+
+    const user = await User.findById(userId);
+    user.token = "";
+    try {
+        await User.findByIdAndUpdate(user._id, user);
+        res.status(204).send('No content');
+    } catch (error) {
+        res.status(401).send('Not authorized');
+    };
+};
+
+async function userCurrent(req, res) {
+    const authHeader = req.get('Authorization');
+    const token = authHeader.replace('Bearer ', '');
+
+    const payload = await jwt.verify(token, process.env.JWT_SECRET);
+    const {userId} = payload;
+    try {
+        const user = await User.findById(userId);
+
+        if(user) {
+            return res.status(200).send({
+                email: user.email,
+                subscription: user.subscription
+            })
+        };
+    } catch (error) {
+        res.status(401).send('Not authorized');
+    };
 };
 
 module.exports = {
     registerValidation,
     userCreate,
     loginValidation,
-    userLogin
+    userLogin,
+    authorization,
+    userLogout,
+    userCurrent
 };
