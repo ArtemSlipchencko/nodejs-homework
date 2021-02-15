@@ -5,16 +5,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 async function registerValidation(req, res, next) {
-    const {
-        body: {email}
-    } = req;
-
-    const user = await User.findOne({email});
-
-    if(user) {
-        return res.status(409).send('Email in use')
-    };
-
     const validationRules = Joi.object({
         email: Joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }).required(),
         password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9]{3,30}$')).required(),
@@ -26,6 +16,16 @@ async function registerValidation(req, res, next) {
 
     if(validationResult.error) {
         return res.status(400).json(validationResult.error)
+    };
+
+    const {
+        body: {email}
+    } = req;
+
+    const user = await User.findOne({email});
+
+    if(user) {
+        return res.status(409).send('Email in use')
     };
 
     next();
@@ -120,6 +120,8 @@ async function authorization(req, res, next) {
             return res.status(401).send('User is unauthorized')
         }
 
+        req.user = user;
+
         next();
     } catch (error) {
         return res.status(401).send(error);
@@ -127,14 +129,9 @@ async function authorization(req, res, next) {
 };
 
 async function userLogout(req, res) {
-    const authHeader = req.get('Authorization');
-    const token = authHeader.replace('Bearer ', '');
-
-    const payload = await jwt.verify(token, process.env.JWT_SECRET);
-    const {userId} = payload;
-
-    const user = await User.findById(userId);
+    const user = req.user;
     user.token = "";
+
     try {
         await User.findByIdAndUpdate(user._id, user);
         res.status(204).send('No content');
