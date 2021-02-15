@@ -141,13 +141,8 @@ async function userLogout(req, res) {
 };
 
 async function userCurrent(req, res) {
-    const authHeader = req.get('Authorization');
-    const token = authHeader.replace('Bearer ', '');
-
-    const payload = await jwt.verify(token, process.env.JWT_SECRET);
-    const {userId} = payload;
     try {
-        const user = await User.findById(userId);
+        const user = req.user;
 
         if(user) {
             return res.status(200).send({
