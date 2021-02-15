@@ -141,18 +141,12 @@ async function userLogout(req, res) {
 };
 
 async function userCurrent(req, res) {
-    try {
-        const user = req.user;
+    const user = req.user;
 
-        if(user) {
-            return res.status(200).send({
-                email: user.email,
-                subscription: user.subscription
-            })
-        };
-    } catch (error) {
-        res.status(401).send('Not authorized');
-    };
+    return res.status(200).send({
+        email: user.email,
+        subscription: user.subscription
+    });
 };
 
 module.exports = {
