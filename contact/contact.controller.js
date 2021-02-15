@@ -101,7 +101,7 @@ function validateCreateContact(req, res, next) {
     };
 
     next();
-}
+};
 
 module.exports = {
     listContacts,
