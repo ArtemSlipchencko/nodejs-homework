@@ -17,9 +17,11 @@ function start() {
   initRoutes(server);
   connectToDb();
   listen(server);
+
+  server.use(express.static('public'));
 };
 
-function initServer(server) {
+function initServer() {
   return express();
 };
 
