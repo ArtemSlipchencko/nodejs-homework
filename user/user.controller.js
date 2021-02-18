@@ -3,6 +3,8 @@ const User = require('./User');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Avatar = require('avatar-builder');
+const fs = require('fs');
 
 async function registerValidation(req, res, next) {
     const validationRules = Joi.object({
@@ -37,7 +39,8 @@ async function userCreate(req, res) {
         const hashedPass = await bcrypt.hash(body.password, 14);
         const user = await User.create({
             ...body,
-            password: hashedPass
+            password: hashedPass,
+            avatarURL: req.pathAvatar
         });
         res.status(201).json(user);
     } catch (error) {
@@ -149,6 +152,15 @@ async function userCurrent(req, res) {
     });
 };
 
+async function createAvatar(req, res, next) {
+    const avatar = Avatar.githubBuilder(128);
+    const pathAvatar = `tmp/${Date.now()}.png`;
+    avatar.create().then(buffer => fs.writeFileSync(pathAvatar, buffer));
+    req.pathAvatar = pathAvatar;
+
+    next();
+};
+
 module.exports = {
     registerValidation,
     userCreate,
@@ -156,5 +168,6 @@ module.exports = {
     userLogin,
     authorization,
     userLogout,
-    userCurrent
+    userCurrent,
+    createAvatar
 };
