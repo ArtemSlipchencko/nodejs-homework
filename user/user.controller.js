@@ -154,11 +154,26 @@ async function userCurrent(req, res) {
 
 async function createAvatar(req, res, next) {
     const avatar = Avatar.githubBuilder(128);
-    const pathAvatar = `tmp/${Date.now()}.png`;
+    const pathAvatar = `/public/images/${Date.now()}.png`;
     avatar.create().then(buffer => fs.writeFileSync(pathAvatar, buffer));
     req.pathAvatar = pathAvatar;
 
     next();
+};
+
+async function userUpdate(req, res) {
+    const {user} = req;
+
+    const updatedUser = await User.findByIdAndUpdate(user._id, user, {new: true});
+
+    if (!updatedUser) {
+        return res.status(404).send('User is not found')
+    };
+
+    res.send({
+        email: updatedUser.email,
+        avatarURL: updatedUser.avatarURL
+    });
 };
 
 module.exports = {
@@ -169,5 +184,6 @@ module.exports = {
     authorization,
     userLogout,
     userCurrent,
-    createAvatar
+    createAvatar,
+    userUpdate
 };
