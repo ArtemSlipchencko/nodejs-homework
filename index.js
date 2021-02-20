@@ -18,7 +18,7 @@ function start() {
   connectToDb();
   listen(server);
 
-  server.use(express.static('public'));
+  server.use('/images', express.static('public/images'));
 };
 
 function initServer() {
