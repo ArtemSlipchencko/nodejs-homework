@@ -3,6 +3,11 @@ const User = require('./User');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Avatar = require('avatar-builder');
+const fs = require('fs');
+const imagemin = require('imagemin');
+const imageminJpegtran = require('imagemin-jpegtran');
+const imageminPngquant = require('imagemin-pngquant');
 
 async function registerValidation(req, res, next) {
     const validationRules = Joi.object({
@@ -37,7 +42,8 @@ async function userCreate(req, res) {
         const hashedPass = await bcrypt.hash(body.password, 14);
         const user = await User.create({
             ...body,
-            password: hashedPass
+            password: hashedPass,
+            avatarURL: req.pathAvatar
         });
         res.status(201).json(user);
     } catch (error) {
@@ -149,6 +155,52 @@ async function userCurrent(req, res) {
     });
 };
 
+async function createAvatar(req, res, next) {
+    const avatar = Avatar.githubBuilder(128);
+    const pathAvatar = `${Date.now()}.png`;
+    avatar.create().then(buffer => fs.writeFileSync(`tmp/${pathAvatar}`, buffer));
+    req.pathAvatar = pathAvatar;
+
+    next();
+};
+
+async function userUpdate(req, res) {
+    const {user} = req;
+    user.avatarURL = req.pathAvatar;
+
+    const updatedUser = await User.findByIdAndUpdate(user._id, user, {new: true});
+
+    if (!updatedUser) {
+        return res.status(404).send('User is not found')
+    };
+
+    res.send({
+        email: updatedUser.email,
+        avatarURL: updatedUser.avatarURL
+    });
+};
+
+async function minifyImage(req, res, next) {
+    const files = await imagemin([`tmp/${req.pathAvatar}`], {
+        destination: 'public/images/',
+        plugins: [
+            imageminJpegtran(),
+            imageminPngquant({
+                quality: [0.6, 0.8]
+            })
+        ]
+    });
+
+    await fs.unlink(`tmp/${req.pathAvatar}`, (err) => {
+        if(err) throw err;
+    });
+    
+    const PORT = process.env.port || 8080;
+    req.pathAvatar = `http://localhost:${PORT}/images/${req.pathAvatar}`;
+
+    next();
+};
+
 module.exports = {
     registerValidation,
     userCreate,
@@ -156,5 +208,8 @@ module.exports = {
     userLogin,
     authorization,
     userLogout,
-    userCurrent
+    userCurrent,
+    createAvatar,
+    userUpdate,
+    minifyImage
 };

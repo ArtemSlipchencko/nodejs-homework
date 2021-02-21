@@ -17,9 +17,11 @@ function start() {
   initRoutes(server);
   connectToDb();
   listen(server);
+
+  server.use('/images', express.static('public/images'));
 };
 
-function initServer(server) {
+function initServer() {
   return express();
 };
 
