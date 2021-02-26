@@ -8,6 +8,33 @@ const fs = require('fs');
 const imagemin = require('imagemin');
 const imageminJpegtran = require('imagemin-jpegtran');
 const imageminPngquant = require('imagemin-pngquant');
+const sgMail = require('@sendgrid/mail');
+const dotenv = require('dotenv');
+const { v4: uuidv4 } = require('uuid');
+
+dotenv.config();
+
+const PORT = process.env.port || 8080;
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+async function userVerify(req, res) {
+    const {params: {
+        verificationToken
+    }} = req;
+
+    console.log(verificationToken)
+
+    const user = await User.findOne({verificationToken});
+
+    if(user) {
+        user.verificationToken = "";
+        const updatedUser = await User.findByIdAndUpdate(user._id, user, {new: true});
+        res.status("200").send("Your account is verified");
+    } else {
+        return res.send("User not found").status("404");
+    }
+};
 
 async function registerValidation(req, res, next) {
     const validationRules = Joi.object({
@@ -37,18 +64,41 @@ async function registerValidation(req, res, next) {
 };
 
 async function userCreate(req, res) {
-    try {
-        const {body} = req;
-        const hashedPass = await bcrypt.hash(body.password, 14);
-        const user = await User.create({
-            ...body,
-            password: hashedPass,
-            avatarURL: req.pathAvatar
-        });
-        res.status(201).json(user);
-    } catch (error) {
-        res.status(400).send(error);
-    };
+    const verificationToken = uuidv4();;
+
+    const {body: {email}} = req;
+
+    const msg = {
+        to: `${email}`, // Change to your recipient
+        from: 'pfistaskin@gmail.com', // Change to your verified sender
+        subject: 'Verify',
+        html: `<a href="http://localhost:${PORT}/auth/verify/${verificationToken}">Please, verify your account<a>`
+      };
+
+        try {
+            const {body} = req;
+            const hashedPass = await bcrypt.hash(body.password, 14);
+            const user = await User.create({
+                ...body,
+                password: hashedPass,
+                avatarURL: req.pathAvatar,
+                verificationToken: `${verificationToken}`
+            });
+
+            sgMail
+            .send(msg)
+                .then(() => {
+                    console.log('Email sent')
+                })
+                .catch((error) => {
+                    console.log(process.env.SENDGRID_API_KEY);
+                    console.error(error)
+                });
+
+            res.status(201).json(user);
+        } catch (error) {
+            res.status(400).send(error);
+        };
 };
 
 async function loginValidation(req, res, next) {
@@ -195,7 +245,6 @@ async function minifyImage(req, res, next) {
         if(err) throw err;
     });
     
-    const PORT = process.env.port || 8080;
     req.pathAvatar = `http://localhost:${PORT}/images/${req.pathAvatar}`;
 
     next();
@@ -211,5 +260,6 @@ module.exports = {
     userCurrent,
     createAvatar,
     userUpdate,
-    minifyImage
+    minifyImage,
+    userVerify
 };

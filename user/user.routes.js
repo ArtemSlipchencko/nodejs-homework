@@ -24,5 +24,6 @@ router.post('/register', UserController.registerValidation, UserController.creat
 router.post('/login', UserController.loginValidation, UserController.userLogin);
 router.post('/logout', UserController.authorization, UserController.userLogout);
 router.post('/current', UserController.authorization, UserController.userCurrent);
+router.get('/verify/:verificationToken', UserController.userVerify);
 
 module.exports = router;
